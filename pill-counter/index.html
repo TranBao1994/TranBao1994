@@ -132,12 +132,12 @@
   <div class="panel">
     <h3>⚙️ Tinh chỉnh (kéo rồi bấm “Đếm tự động” lại)</h3>
     <div class="slider">
-      <div class="top"><span>Kích thước viên (lớn = đếm thưa hơn)</span><b id="sizeVal">26</b></div>
-      <input type="range" id="sizeRange" min="8" max="70" value="26" />
+      <div class="top"><span>Kích thước viên (lớn = đếm thưa hơn)</span><b id="sizeVal">22</b></div>
+      <input type="range" id="sizeRange" min="8" max="70" value="22" />
     </div>
     <div class="slider">
-      <div class="top"><span>Mức lọc nền (cao = loại nhiễu mạnh)</span><b id="sensVal">10</b></div>
-      <input type="range" id="sensRange" min="0" max="45" value="10" />
+      <div class="top"><span>Mức lọc nền (thấp = nhạy hơn, cao = loại nhiễu)</span><b id="sensVal">5</b></div>
+      <input type="range" id="sensRange" min="-25" max="45" value="5" />
     </div>
     <div class="slider">
       <div class="top"><span>Nền của ảnh</span><b id="bgVal">Tự động</b></div>
@@ -289,7 +289,7 @@
       var rs=0;
       for(var x=0;x<rw;x++){ rs += gray[y*rw+x]; integ[(y+1)*iw+(x+1)] = integ[y*iw+(x+1)] + rs; }
     }
-    var half = Math.max(4, Math.round(pillSize*1.0));
+    var half = Math.max(8, Math.min(140, Math.round(pillSize*2.5)));
     var mask = new Uint8Array(n);
     for(var y2=0;y2<rh;y2++){
       var x0,y0,x1,y1;
@@ -305,59 +305,97 @@
       }
     }
 
-    // --- Co ảnh (erode) để tách viên dính nhau ---
-    var iter = Math.max(1, Math.min(22, Math.round(pillSize*0.34)));
-    mask = erode(mask, rw, rh, iter);
+    // --- Khử nhiễu nhỏ: mở ảnh nhẹ (1 lần erode→dilate) ---
+    mask = openOnce(mask, rw, rh);
 
-    // --- Gắn nhãn liên thông → tâm mỗi cụm ---
-    var minArea = Math.max(3, Math.round(pillSize*pillSize*0.05));
-    var centers = labelCentroids(mask, rw, rh, minArea);
+    // --- Distance transform → tìm đỉnh = tâm mỗi viên (không làm mất viên) ---
+    var dist = distanceTransform(mask, rw, rh);
+    var minDist = Math.max(4, Math.round(pillSize));
+    var minPeak = Math.max(2, pillSize*0.32);
+    var peaks = findPeaks(dist, rw, rh, minDist, minPeak);
 
     points = [];
-    for(var c=0;c<centers.length;c++) points.push({ x: centers[c].x + rx, y: centers[c].y + ry });
+    for(var c=0;c<peaks.length;c++) points.push({ x: peaks[c].x + rx, y: peaks[c].y + ry });
     pushHistory();
     drawOverlay(); updateCount();
-    toast('AI đếm được ' + points.length + ' viên. Chạm để chỉnh lại.');
+    if(points.length === 0){
+      toast('Chưa thấy viên nào. Hãy giảm "Mức lọc nền" hoặc đổi "Nền của ảnh".');
+    } else {
+      toast('AI đếm được ' + points.length + ' viên. Chạm để chỉnh lại.');
+    }
   }
 
-  function erode(mask, w, h, iter){
-    var cur = mask;
-    for(var t=0;t<iter;t++){
-      var nx = new Uint8Array(w*h);
-      for(var y=1;y<h-1;y++){
-        var row=y*w;
-        for(var x=1;x<w-1;x++){
-          var i=row+x;
-          if(cur[i] && cur[i-1] && cur[i+1] && cur[i-w] && cur[i+w]
-             && cur[i-w-1] && cur[i-w+1] && cur[i+w-1] && cur[i+w+1]) nx[i]=1;
-        }
+  // Mở ảnh nhẹ: erode 1 lần rồi dilate 1 lần (khử chấm nhiễu lẻ, giữ nguyên viên)
+  function openOnce(mask, w, h){
+    var er = new Uint8Array(w*h);
+    for(var y=1;y<h-1;y++){ var r=y*w;
+      for(var x=1;x<w-1;x++){ var i=r+x;
+        if(mask[i] && mask[i-1] && mask[i+1] && mask[i-w] && mask[i+w]) er[i]=1;
       }
-      cur = nx;
     }
-    return cur;
+    var di = new Uint8Array(w*h);
+    for(var y2=1;y2<h-1;y2++){ var r2=y2*w;
+      for(var x2=1;x2<w-1;x2++){ var j=r2+x2;
+        if(er[j] || er[j-1] || er[j+1] || er[j-w] || er[j+w]) di[j]=1;
+      }
+    }
+    return di;
   }
 
-  function labelCentroids(mask, w, h, minArea){
-    var visited = new Uint8Array(w*h);
-    var stack = new Int32Array(w*h);
-    var centers = [];
-    for(var i=0;i<w*h;i++){
-      if(mask[i] && !visited[i]){
-        var sp=0; stack[sp++]=i; visited[i]=1;
-        var sx=0, sy=0, cnt=0;
-        while(sp>0){
-          var idx=stack[--sp];
-          var x=idx%w, y=(idx/w)|0;
-          sx+=x; sy+=y; cnt++;
-          if(x>0   && mask[idx-1] && !visited[idx-1]){ visited[idx-1]=1; stack[sp++]=idx-1; }
-          if(x<w-1 && mask[idx+1] && !visited[idx+1]){ visited[idx+1]=1; stack[sp++]=idx+1; }
-          if(y>0   && mask[idx-w] && !visited[idx-w]){ visited[idx-w]=1; stack[sp++]=idx-w; }
-          if(y<h-1 && mask[idx+w] && !visited[idx+w]){ visited[idx+w]=1; stack[sp++]=idx+w; }
-        }
-        if(cnt>=minArea) centers.push({ x:sx/cnt, y:sy/cnt });
-      }
+  // Distance transform (chamfer 3-4): khoảng cách tới pixel nền gần nhất
+  function distanceTransform(mask, w, h){
+    var INF = 1e9, d = new Float32Array(w*h);
+    for(var i=0;i<d.length;i++) d[i] = mask[i] ? INF : 0;
+    var a=3, b=4;
+    for(var y=0;y<h;y++) for(var x=0;x<w;x++){
+      var idx=y*w+x; if(d[idx]===0) continue; var v=d[idx];
+      if(x>0) v=Math.min(v, d[idx-1]+a);
+      if(y>0) v=Math.min(v, d[idx-w]+a);
+      if(x>0&&y>0) v=Math.min(v, d[idx-w-1]+b);
+      if(x<w-1&&y>0) v=Math.min(v, d[idx-w+1]+b);
+      d[idx]=v;
     }
-    return centers;
+    for(var y2=h-1;y2>=0;y2--) for(var x2=w-1;x2>=0;x2--){
+      var idx2=y2*w+x2; if(d[idx2]===0) continue; var v2=d[idx2];
+      if(x2<w-1) v2=Math.min(v2, d[idx2+1]+a);
+      if(y2<h-1) v2=Math.min(v2, d[idx2+w]+a);
+      if(x2<w-1&&y2<h-1) v2=Math.min(v2, d[idx2+w+1]+b);
+      if(x2>0&&y2<h-1) v2=Math.min(v2, d[idx2+w-1]+b);
+      d[idx2]=v2;
+    }
+    for(var k=0;k<d.length;k++) d[k] /= 3;
+    return d;
+  }
+
+  // Tìm cực đại cục bộ rồi lọc theo khoảng cách (NMS) → mỗi đỉnh = 1 viên
+  function findPeaks(dist, w, h, minDist, minPeak){
+    var cands = [];
+    for(var y=1;y<h-1;y++) for(var x=1;x<w-1;x++){
+      var i=y*w+x, v=dist[i];
+      if(v < minPeak) continue;
+      var isMax = true;
+      for(var dy=-1;dy<=1&&isMax;dy++) for(var dx=-1;dx<=1;dx++){
+        if(dx===0&&dy===0) continue;
+        if(dist[(y+dy)*w+(x+dx)] > v){ isMax=false; break; }
+      }
+      if(isMax) cands.push({x:x,y:y,v:v});
+    }
+    cands.sort(function(p,q){ return q.v - p.v; });
+    var cell = Math.max(1, minDist), grid = {}, accepted = [];
+    function key(a,b){ return a+'_'+b; }
+    for(var c=0;c<cands.length;c++){
+      var pt=cands[c], gx=Math.floor(pt.x/cell), gy=Math.floor(pt.y/cell), ok=true;
+      for(var ax=-1;ax<=1&&ok;ax++) for(var ay=-1;ay<=1;ay++){
+        var bk=grid[key(gx+ax,gy+ay)];
+        if(bk){ for(var bb=0;bb<bk.length;bb++){
+          var o=bk[bb], ddx=o.x-pt.x, ddy=o.y-pt.y;
+          if(ddx*ddx+ddy*ddy < minDist*minDist){ ok=false; break; }
+        } }
+        if(!ok) break;
+      }
+      if(ok){ accepted.push({x:pt.x,y:pt.y}); var kk=key(gx,gy); (grid[kk]||(grid[kk]=[])).push(pt); }
+    }
+    return accepted;
   }
 
   // ===================================================================
