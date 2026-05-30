@@ -11,16 +11,25 @@ AI đếm tự động, sau đó bạn **chạm để thêm/bớt** cho đúng 1
 - ⚙️ Tinh chỉnh: kích thước viên, độ nhạy, loại nền (tối/sáng/tự động).
 - 🔌 Chạy hoàn toàn trên máy — **không cần internet, không gửi ảnh đi đâu** (riêng tư).
 
-## 🚀 Cách dùng
-1. Mở file `index.html` bằng trình duyệt trên điện thoại (Chrome/Safari).
-2. Bấm **Chụp ảnh** hoặc **Chọn ảnh**.
-3. Bấm **🤖 Đếm tự động**.
-4. Chạm vào chỗ thiếu để thêm chấm, chạm vào chấm thừa để xóa → số tổng cập nhật tức thì.
+## 📱 Mở trên iPhone (chỉ 1 file, KHÔNG cần internet, KHÔNG cần GitHub)
 
-### Mở online (gợi ý)
-Bật **GitHub Pages** cho repo, rồi truy cập:
-`https://<tên-github>.github.io/<repo>/pill-counter/`
-là dùng được trên điện thoại mà không cần copy file.
+App chỉ gồm **1 file `index.html`**. Mở file đó lên là chạy. Cách đưa vào iPhone:
+
+**Cách 1 — Lưu vào Files rồi mở:**
+1. Nhận file `index.html` (qua AirDrop, Zalo, email, Tin nhắn...).
+2. Bấm **Lưu vào “Tệp” (Files)** → chọn “Trên iPhone của tôi”.
+3. Mở app **Tệp (Files)** → bấm vào `index.html` → app chạy ngay.
+
+**Cách 2 — Mở bằng Safari (mượt nhất):**
+1. Trong app **Tệp**, nhấn giữ `index.html` → **Chia sẻ** → chọn **Safari** (hoặc “Mở trong…”).
+2. Để dùng lại nhanh: trong Safari bấm **Chia sẻ → Thêm vào MH chính (Add to Home Screen)** → có icon như 1 app thật trên màn hình.
+
+> Sau khi mở lần đầu, app dùng được **offline hoàn toàn**, không gửi ảnh đi đâu.
+
+## 🚀 Các bước dùng
+1. Bấm **Chụp ảnh** hoặc **Chọn ảnh**.
+2. Bấm **🤖 Đếm tự động**.
+3. Chạm vào chỗ thiếu để **thêm chấm**, chạm vào chấm thừa để **xóa** → số tổng cập nhật tức thì.
 
 ## 🎯 Mẹo để đếm chính xác
 - Đặt thuốc trên **nền màu trơn, tương phản** (viên trắng → nền tối, và ngược lại).

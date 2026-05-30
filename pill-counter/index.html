@@ -442,8 +442,11 @@
   // ===================================================================
   function canvasPos(evt){
     var rect = overlay.getBoundingClientRect();
-    var cx = (evt.touches ? evt.touches[0].clientX : evt.clientX) - rect.left;
-    var cy = (evt.touches ? evt.touches[0].clientY : evt.clientY) - rect.top;
+    var src = evt;
+    if(evt.touches && evt.touches.length) src = evt.touches[0];
+    else if(evt.changedTouches && evt.changedTouches.length) src = evt.changedTouches[0];
+    var cx = src.clientX - rect.left;
+    var cy = src.clientY - rect.top;
     return { x: cx * (W/rect.width), y: cy * (H/rect.height) };
   }
 
@@ -464,8 +467,16 @@
     drawOverlay(); updateCount();
   }
 
-  overlay.addEventListener('click', handleTap);
-  overlay.addEventListener('touchstart', handleTap, { passive:false });
+  // iPhone bắn cả touch lẫn click cho một lần chạm → dùng cờ thời gian để chỉ tính 1 lần
+  var lastTouchTime = 0;
+  overlay.addEventListener('touchend', function(e){
+    lastTouchTime = Date.now();
+    handleTap(e);
+  }, { passive:false });
+  overlay.addEventListener('click', function(e){
+    if(Date.now() - lastTouchTime < 700) return; // bỏ click "ảo" sinh ra sau khi chạm
+    handleTap(e);
+  });
 
   // ---- Nút điều khiển ----
   document.getElementById('autoBtn').addEventListener('click', autoCount);
