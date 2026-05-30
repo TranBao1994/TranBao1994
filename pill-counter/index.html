@@ -13,22 +13,22 @@
     background: #0b1220; color: #e6edf3; overscroll-behavior: none;
   }
   header {
-    text-align: center; padding: 12px 10px 8px;
+    text-align: center; padding: 10px 10px 8px;
     background: linear-gradient(135deg, #0e7490, #155e75);
     box-shadow: 0 2px 10px rgba(0,0,0,.4);
   }
-  header h1 { margin: 0; font-size: 20px; }
-  header p { margin: 4px 0 0; font-size: 12px; opacity: .85; }
+  header h1 { margin: 0; font-size: 19px; }
+  header p { margin: 4px 0 0; font-size: 12px; opacity: .9; }
 
   .count-bar {
     position: sticky; top: 0; z-index: 20;
     display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; padding: 10px 14px;
+    gap: 10px; padding: 8px 14px;
     background: #111a2b; border-bottom: 1px solid #1f2a3d;
   }
   .count-bar .num {
-    font-size: 34px; font-weight: 800; color: #34d399; line-height: 1;
-    min-width: 70px; text-align: center;
+    font-size: 32px; font-weight: 800; color: #34d399; line-height: 1;
+    min-width: 64px; text-align: center;
   }
   .count-bar .lbl { font-size: 12px; opacity: .8; }
 
@@ -36,20 +36,23 @@
     position: relative; width: 100%;
     background: #060a13;
     display: flex; align-items: center; justify-content: center;
-    min-height: 240px; overflow: hidden;
+    min-height: 220px; overflow: hidden;
   }
   #wrap { position: relative; line-height: 0; touch-action: none; }
   #photo, #overlay { display: block; max-width: 100%; height: auto; }
   #overlay { position: absolute; left: 0; top: 0; }
-  .empty {
-    color: #5b6b82; font-size: 14px; padding: 40px 20px; text-align: center;
-  }
+  .empty { color: #5b6b82; font-size: 14px; padding: 36px 20px; text-align: center; }
 
-  .controls { padding: 12px 14px 80px; }
-  .row { display: flex; gap: 10px; margin-bottom: 12px; }
-  .row.wrap { flex-wrap: wrap; }
+  .mode-tip {
+    background: #78350f; color: #fde68a; font-size: 12.5px; text-align: center;
+    padding: 8px 12px; display: none; line-height: 1.4;
+  }
+  .mode-tip.show { display: block; }
+
+  .controls { padding: 12px 14px 90px; }
+  .row { display: flex; gap: 10px; margin-bottom: 10px; }
   button, label.btn {
-    flex: 1; border: 0; border-radius: 12px; padding: 14px 10px;
+    flex: 1; border: 0; border-radius: 12px; padding: 14px 8px;
     font-size: 15px; font-weight: 700; color: #fff; cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   }
@@ -57,6 +60,8 @@
   .btn-gal { background: #4338ca; }
   .btn-auto { background: #15803d; }
   .btn-clear { background: #b91c1c; }
+  .btn-crop { background: #1f2a3d; border: 2px solid #475569; }
+  .btn-crop.on { background: #b45309; border-color: #fbbf24; }
   .btn-ghost { background: #1f2a3d; }
   button:active, label.btn:active { filter: brightness(1.2); transform: scale(.98); }
   button:disabled { opacity: .4; }
@@ -74,14 +79,14 @@
   .seg button { border-radius: 0; background: #0b1220; font-size: 13px; padding: 10px; font-weight: 600; }
   .seg button.on { background: #0e7490; }
 
-  .hint { font-size: 12px; color: #8aa0bd; line-height: 1.5; }
+  .hint { font-size: 12px; color: #8aa0bd; line-height: 1.55; }
   .hint b { color: #cde; }
 
   .toast {
     position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
     background: #1f2a3d; color: #fff; padding: 10px 16px; border-radius: 20px;
     font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 50;
-    box-shadow: 0 4px 14px rgba(0,0,0,.5);
+    box-shadow: 0 4px 14px rgba(0,0,0,.5); max-width: 90%; text-align: center;
   }
   .toast.show { opacity: 1; }
   .spin { display:none; }
@@ -92,7 +97,7 @@
 <body>
 <header>
   <h1>💊 Đếm Viên Thuốc</h1>
-  <p>Chụp ảnh → AI đếm tự động → chạm để thêm/bớt cho đúng</p>
+  <p>Khoanh vùng → AI đếm → chạm để chỉnh cho đúng</p>
 </header>
 
 <div class="count-bar">
@@ -101,8 +106,10 @@
   <button class="btn-ghost" id="undoBtn" style="flex:0 0 auto;padding:10px 14px;font-size:13px;">↩︎ Hoàn tác</button>
 </div>
 
+<div class="mode-tip" id="modeTip">✂️ Đang khoanh vùng — <b>kéo ngón tay</b> bao quanh chỗ thuốc. Chạm 1 cái (không kéo) để bỏ khung. Bấm “Khoanh vùng” lần nữa để xong.</div>
+
 <div class="stage">
-  <div id="emptyMsg" class="empty">Chưa có ảnh.<br>Bấm <b>Chụp ảnh</b> hoặc <b>Chọn ảnh</b> bên dưới để bắt đầu.</div>
+  <div id="emptyMsg" class="empty">Chưa có ảnh.<br>Bấm <b>Chụp ảnh</b> hoặc <b>Chọn ảnh</b> để bắt đầu.</div>
   <div id="wrap" style="display:none;">
     <canvas id="photo"></canvas>
     <canvas id="overlay"></canvas>
@@ -111,31 +118,26 @@
 
 <div class="controls">
   <div class="row">
-    <label class="btn btn-cam">
-      📷 Chụp ảnh
-      <input type="file" id="camInput" accept="image/*" capture="environment" />
-    </label>
-    <label class="btn btn-gal">
-      🖼️ Chọn ảnh
-      <input type="file" id="galInput" accept="image/*" />
-    </label>
+    <label class="btn btn-cam">📷 Chụp ảnh<input type="file" id="camInput" accept="image/*" capture="environment" /></label>
+    <label class="btn btn-gal">🖼️ Chọn ảnh<input type="file" id="galInput" accept="image/*" /></label>
   </div>
   <div class="row">
-    <button class="btn-auto" id="autoBtn" disabled>
-      <span class="spin" id="spin">⏳</span> 🤖 Đếm tự động
-    </button>
+    <button class="btn-crop" id="cropBtn" disabled>✂️ Khoanh vùng</button>
+    <button class="btn-auto" id="autoBtn" disabled><span class="spin" id="spin">⏳</span> 🤖 Đếm tự động</button>
+  </div>
+  <div class="row">
     <button class="btn-clear" id="clearBtn" disabled>🗑️ Xóa hết điểm</button>
   </div>
 
   <div class="panel">
-    <h3>⚙️ Tinh chỉnh cho AI (kéo rồi bấm “Đếm tự động” lại)</h3>
+    <h3>⚙️ Tinh chỉnh (kéo rồi bấm “Đếm tự động” lại)</h3>
     <div class="slider">
-      <div class="top"><span>Kích thước viên</span><b id="sizeVal">22</b></div>
-      <input type="range" id="sizeRange" min="8" max="60" value="22" />
+      <div class="top"><span>Kích thước viên (lớn = đếm thưa hơn)</span><b id="sizeVal">26</b></div>
+      <input type="range" id="sizeRange" min="8" max="70" value="26" />
     </div>
     <div class="slider">
-      <div class="top"><span>Độ nhạy nhận diện</span><b id="sensVal">0</b></div>
-      <input type="range" id="sensRange" min="-60" max="60" value="0" />
+      <div class="top"><span>Mức lọc nền (cao = loại nhiễu mạnh)</span><b id="sensVal">10</b></div>
+      <input type="range" id="sensRange" min="0" max="45" value="10" />
     </div>
     <div class="slider">
       <div class="top"><span>Nền của ảnh</span><b id="bgVal">Tự động</b></div>
@@ -149,11 +151,12 @@
 
   <div class="panel">
     <p class="hint">
-      <b>Mẹo đếm chính xác:</b><br>
-      • Đặt thuốc trên nền <b>màu trơn, tương phản</b> (vd: viên trắng trên nền tối).<br>
-      • Trải đều, <b>hạn chế viên chồng lên nhau</b>.<br>
-      • Chụp từ trên xuống, đủ sáng, không bóng.<br>
-      • Sau khi AI đếm: <b>chạm vào chỗ thiếu</b> để thêm chấm, <b>chạm vào chấm thừa</b> để xóa.
+      <b>Để đếm chính xác:</b><br>
+      1️⃣ Bấm <b>✂️ Khoanh vùng</b> rồi kéo 1 khung <b>chỉ bao quanh chỗ thuốc</b> (bỏ nền, đồ xung quanh).<br>
+      2️⃣ Bấm <b>🤖 Đếm tự động</b>.<br>
+      3️⃣ Nếu dư/thiếu: chỉnh <b>Kích thước viên</b> cho khớp rồi đếm lại.<br>
+      4️⃣ <b>Chạm</b> vào chỗ sót để thêm chấm, chạm chấm thừa để xóa → ra số đúng 100%.<br>
+      💡 Chụp <b>từ trên xuống</b>, đủ sáng, trải đều, ít chồng lên nhau.
     </p>
   </div>
 </div>
@@ -164,7 +167,6 @@
 (function(){
   "use strict";
 
-  // ---- Trạng thái ----
   var photo = document.getElementById('photo');
   var overlay = document.getElementById('overlay');
   var pctx = photo.getContext('2d', { willReadFrequently: true });
@@ -172,336 +174,322 @@
   var wrap = document.getElementById('wrap');
   var emptyMsg = document.getElementById('emptyMsg');
   var countEl = document.getElementById('count');
+  var modeTip = document.getElementById('modeTip');
 
-  var W = 0, H = 0;            // kích thước ảnh đang xử lý (px canvas)
-  var points = [];            // các chấm: {x, y} theo toạ độ canvas
-  var history = [];           // lưu để hoàn tác
+  var W = 0, H = 0;
+  var points = [];          // {x,y} toạ độ canvas
+  var history = [];
   var hasImage = false;
   var bgMode = 'auto';
+  var roi = null;           // {x,y,w,h} vùng đếm; null = toàn ảnh
+  var cropMode = false;
+  var dragStart = null, dragRect = null, downP = null, moved = false;
 
-  // ---- Tiện ích ----
   function toast(msg){
     var t = document.getElementById('toast');
     t.textContent = msg; t.classList.add('show');
-    clearTimeout(t._t); t._t = setTimeout(function(){ t.classList.remove('show'); }, 1600);
+    clearTimeout(t._t); t._t = setTimeout(function(){ t.classList.remove('show'); }, 1900);
   }
   function pushHistory(){ history.push(JSON.stringify(points)); if(history.length>40) history.shift(); }
   function updateCount(){ countEl.textContent = points.length; }
-
   function setBtns(on){
     document.getElementById('autoBtn').disabled = !on;
     document.getElementById('clearBtn').disabled = !on;
+    document.getElementById('cropBtn').disabled = !on;
   }
 
-  // ---- Tải ảnh ----
+  // ---------- Tải ảnh ----------
   function loadFile(file){
     if(!file) return;
     var img = new Image();
     img.onload = function(){
-      // Giảm kích thước để xử lý nhanh trên điện thoại (cạnh lớn nhất ~1100px)
-      var maxDim = 1100;
+      var maxDim = 1200;
       var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
       W = Math.round(img.width * scale);
       H = Math.round(img.height * scale);
       photo.width = W; photo.height = H;
       overlay.width = W; overlay.height = H;
       pctx.drawImage(img, 0, 0, W, H);
-
-      points = []; history = [];
+      points = []; history = []; roi = null; setCrop(false);
       hasImage = true;
       emptyMsg.style.display = 'none';
       wrap.style.display = 'block';
       setBtns(true);
-      drawOverlay();
-      updateCount();
+      drawOverlay(); updateCount();
       URL.revokeObjectURL(img.src);
-      toast('Đã tải ảnh. Bấm “Đếm tự động”.');
+      toast('Đã tải ảnh. Hãy ✂️ Khoanh vùng quanh thuốc rồi bấm Đếm.');
     };
     img.onerror = function(){ toast('Không đọc được ảnh.'); };
     img.src = URL.createObjectURL(file);
   }
-
   document.getElementById('camInput').addEventListener('change', function(e){ loadFile(e.target.files[0]); e.target.value=''; });
   document.getElementById('galInput').addEventListener('change', function(e){ loadFile(e.target.files[0]); e.target.value=''; });
 
   // ===================================================================
-  //  THUẬT TOÁN ĐẾM TỰ ĐỘNG
-  //  1) Chuyển xám  2) Ngưỡng Otsu (tách viên/nền)
-  //  3) Distance transform  4) Tìm đỉnh (mỗi đỉnh = 1 viên)
+  //  ĐẾM TỰ ĐỘNG (mới):
+  //  ROI → xám → ngưỡng thích nghi (local adaptive) → co (erode) tách
+  //  viên dính nhau → gắn nhãn liên thông → tâm mỗi cụm = 1 viên
   // ===================================================================
-
   function autoCount(){
     if(!hasImage) return;
+    if(cropMode) setCrop(false);
     var spin = document.getElementById('spin');
     spin.classList.add('show');
     document.getElementById('autoBtn').disabled = true;
-
-    // Cho UI kịp render spinner
     setTimeout(function(){
-      try {
-        runDetection();
-      } catch(err){
-        console.error(err); toast('Lỗi khi đếm: ' + err.message);
-      }
+      try { runDetection(); }
+      catch(err){ console.error(err); toast('Lỗi: ' + err.message); }
       spin.classList.remove('show');
       document.getElementById('autoBtn').disabled = false;
     }, 30);
   }
 
   function runDetection(){
-    var data = pctx.getImageData(0, 0, W, H).data;
-    var n = W * H;
+    var rx = roi ? Math.round(roi.x) : 0;
+    var ry = roi ? Math.round(roi.y) : 0;
+    var rw = roi ? Math.round(roi.w) : W;
+    var rh = roi ? Math.round(roi.h) : H;
+    rw = Math.min(rw, W - rx); rh = Math.min(rh, H - ry);
+    if(rw < 5 || rh < 5){ toast('Vùng quá nhỏ.'); return; }
+
+    var data = pctx.getImageData(rx, ry, rw, rh).data;
+    var n = rw * rh;
     var gray = new Float32Array(n);
     var hist = new Int32Array(256);
     for(var i=0, p=0; i<n; i++, p+=4){
-      // độ sáng cảm nhận
       var g = (data[p]*0.299 + data[p+1]*0.587 + data[p+2]*0.114) | 0;
-      gray[i] = g;
-      hist[g]++;
+      gray[i] = g; hist[g]++;
     }
 
-    // --- Ngưỡng Otsu ---
-    var total = n, sum = 0;
-    for(var t=0; t<256; t++) sum += t * hist[t];
-    var sumB = 0, wB = 0, varMax = 0, threshold = 127;
-    for(var t2=0; t2<256; t2++){
-      wB += hist[t2]; if(wB === 0) continue;
-      var wF = total - wB; if(wF === 0) break;
-      sumB += t2 * hist[t2];
-      var mB = sumB / wB, mF = (sum - sumB) / wF;
-      var between = wB * wF * (mB - mF) * (mB - mF);
-      if(between > varMax){ varMax = between; threshold = t2; }
+    // --- Otsu chỉ để quyết định viên sáng hay tối ---
+    var total=n, sum=0;
+    for(var t=0;t<256;t++) sum += t*hist[t];
+    var sumB=0, wB=0, varMax=0, oth=127;
+    for(var t2=0;t2<256;t2++){
+      wB+=hist[t2]; if(!wB) continue;
+      var wF=total-wB; if(!wF) break;
+      sumB += t2*hist[t2];
+      var mB=sumB/wB, mF=(sum-sumB)/wF;
+      var bt=wB*wF*(mB-mF)*(mB-mF);
+      if(bt>varMax){ varMax=bt; oth=t2; }
     }
-
-    var sens = parseInt(document.getElementById('sensRange').value, 10);
-    threshold += sens;
-
-    // --- Xác định viên là vùng sáng hay tối ---
-    // Đếm pixel sáng hơn / tối hơn ngưỡng để đoán nền (nền thường chiếm đa số diện tích)
-    var bright = 0;
-    for(var k=0; k<n; k++) if(gray[k] > threshold) bright++;
+    var bright=0; for(var b=0;b<n;b++) if(gray[b]>oth) bright++;
     var pillsAreBright;
-    if(bgMode === 'dark') pillsAreBright = true;
-    else if(bgMode === 'light') pillsAreBright = false;
-    else pillsAreBright = bright < (n * 0.5); // tự động: viên là nhóm thiểu số
+    if(bgMode==='dark') pillsAreBright=true;
+    else if(bgMode==='light') pillsAreBright=false;
+    else pillsAreBright = bright < n*0.5;
 
-    // --- Mặt nạ nhị phân: 1 = viên ---
+    var pillSize = parseInt(document.getElementById('sizeRange').value,10);
+    var C = parseInt(document.getElementById('sensRange').value,10);
+
+    // --- Ngưỡng thích nghi bằng ảnh tích phân (integral image) ---
+    var iw = rw+1;
+    var integ = new Float64Array(iw*(rh+1));
+    for(var y=0;y<rh;y++){
+      var rs=0;
+      for(var x=0;x<rw;x++){ rs += gray[y*rw+x]; integ[(y+1)*iw+(x+1)] = integ[y*iw+(x+1)] + rs; }
+    }
+    var half = Math.max(4, Math.round(pillSize*1.0));
     var mask = new Uint8Array(n);
-    for(var m=0; m<n; m++){
-      var isFg = pillsAreBright ? (gray[m] > threshold) : (gray[m] < threshold);
-      mask[m] = isFg ? 1 : 0;
+    for(var y2=0;y2<rh;y2++){
+      var x0,y0,x1,y1;
+      y0 = Math.max(0, y2-half); y1 = Math.min(rh-1, y2+half);
+      for(var x2=0;x2<rw;x2++){
+        x0 = Math.max(0, x2-half); x1 = Math.min(rw-1, x2+half);
+        var A=integ[y0*iw+x0], Bv=integ[y0*iw+(x1+1)], Cc=integ[(y1+1)*iw+x0], D=integ[(y1+1)*iw+(x1+1)];
+        var area=(x1-x0+1)*(y1-y0+1);
+        var lm=(D-Bv-Cc+A)/area;
+        var gv=gray[y2*rw+x2];
+        var fg = pillsAreBright ? (gv > lm + C) : (gv < lm - C);
+        mask[y2*rw+x2] = fg ? 1 : 0;
+      }
     }
 
-    // --- Mở ảnh (erode→dilate) khử nhiễu nhỏ ---
-    mask = morphOpen(mask, W, H);
+    // --- Co ảnh (erode) để tách viên dính nhau ---
+    var iter = Math.max(1, Math.min(22, Math.round(pillSize*0.34)));
+    mask = erode(mask, rw, rh, iter);
 
-    // --- Distance transform (chamfer 3-4) ---
-    var dist = distanceTransform(mask, W, H);
+    // --- Gắn nhãn liên thông → tâm mỗi cụm ---
+    var minArea = Math.max(3, Math.round(pillSize*pillSize*0.05));
+    var centers = labelCentroids(mask, rw, rh, minArea);
 
-    // --- Tìm đỉnh = tâm các viên ---
-    var pillSize = parseInt(document.getElementById('sizeRange').value, 10);
-    var minDist = Math.max(4, pillSize);            // khoảng cách tối thiểu giữa 2 tâm
-    var minPeak = Math.max(2, pillSize * 0.40);     // bán kính tối thiểu để tính là viên
-    var peaks = findPeaks(dist, W, H, minDist, minPeak);
-
-    points = peaks;
+    points = [];
+    for(var c=0;c<centers.length;c++) points.push({ x: centers[c].x + rx, y: centers[c].y + ry });
     pushHistory();
-    drawOverlay();
-    updateCount();
-    toast('AI đếm được ' + peaks.length + ' viên. Chạm để chỉnh lại.');
+    drawOverlay(); updateCount();
+    toast('AI đếm được ' + points.length + ' viên. Chạm để chỉnh lại.');
   }
 
-  function morphOpen(mask, w, h){
-    var er = new Uint8Array(mask.length);
-    // erode 3x3
-    for(var y=1; y<h-1; y++){
-      for(var x=1; x<w-1; x++){
-        var i = y*w+x;
-        if(mask[i] && mask[i-1] && mask[i+1] && mask[i-w] && mask[i+w]) er[i]=1;
-      }
-    }
-    var di = new Uint8Array(mask.length);
-    // dilate 3x3
-    for(var y2=1; y2<h-1; y2++){
-      for(var x2=1; x2<w-1; x2++){
-        var j = y2*w+x2;
-        if(er[j] || er[j-1] || er[j+1] || er[j-w] || er[j+w]) di[j]=1;
-      }
-    }
-    return di;
-  }
-
-  // Chamfer distance transform: khoảng cách tới pixel nền gần nhất
-  function distanceTransform(mask, w, h){
-    var INF = 1e9;
-    var d = new Float32Array(w*h);
-    for(var i=0;i<d.length;i++) d[i] = mask[i] ? INF : 0;
-    var a = 3, b = 4; // trọng số chamfer
-    // forward
-    for(var y=0;y<h;y++){
-      for(var x=0;x<w;x++){
-        var idx=y*w+x; if(d[idx]===0) continue;
-        var v=d[idx];
-        if(x>0) v=Math.min(v, d[idx-1]+a);
-        if(y>0) v=Math.min(v, d[idx-w]+a);
-        if(x>0&&y>0) v=Math.min(v, d[idx-w-1]+b);
-        if(x<w-1&&y>0) v=Math.min(v, d[idx-w+1]+b);
-        d[idx]=v;
-      }
-    }
-    // backward
-    for(var y2=h-1;y2>=0;y2--){
-      for(var x2=w-1;x2>=0;x2--){
-        var idx2=y2*w+x2; if(d[idx2]===0) continue;
-        var v2=d[idx2];
-        if(x2<w-1) v2=Math.min(v2, d[idx2+1]+a);
-        if(y2<h-1) v2=Math.min(v2, d[idx2+w]+a);
-        if(x2<w-1&&y2<h-1) v2=Math.min(v2, d[idx2+w+1]+b);
-        if(x2>0&&y2<h-1) v2=Math.min(v2, d[idx2+w-1]+b);
-        d[idx2]=v2;
-      }
-    }
-    for(var k=0;k<d.length;k++) d[k] = d[k]/3; // quy về ~ pixel
-    return d;
-  }
-
-  // Tìm cực đại cục bộ rồi lọc bằng non-maximum suppression theo khoảng cách
-  function findPeaks(dist, w, h, minDist, minPeak){
-    var cands = [];
-    var r = 1; // cửa sổ kiểm tra cực đại cục bộ
-    for(var y=r;y<h-r;y++){
-      for(var x=r;x<w-r;x++){
-        var i=y*w+x; var v=dist[i];
-        if(v < minPeak) continue;
-        // là cực đại cục bộ trong cửa sổ 3x3?
-        var isMax = true;
-        for(var dy=-r;dy<=r&&isMax;dy++)
-          for(var dx=-r;dx<=r;dx++){
-            if(dx===0&&dy===0) continue;
-            if(dist[(y+dy)*w+(x+dx)] > v){ isMax=false; break; }
-          }
-        if(isMax) cands.push({x:x, y:y, v:v});
-      }
-    }
-    // Sắp theo độ "đậm" giảm dần, NMS tham lam
-    cands.sort(function(p,q){ return q.v - p.v; });
-    var accepted = [];
-    var cell = Math.max(1, minDist);
-    var grid = {}; // lưới băm không gian để NMS nhanh
-    function key(cx,cy){ return cx+'_'+cy; }
-    for(var c=0;c<cands.length;c++){
-      var pt = cands[c];
-      var gx = Math.floor(pt.x/cell), gy = Math.floor(pt.y/cell);
-      var ok = true;
-      for(var ax=-1;ax<=1&&ok;ax++)
-        for(var ay=-1;ay<=1;ay++){
-          var bucket = grid[key(gx+ax, gy+ay)];
-          if(bucket){
-            for(var bb=0;bb<bucket.length;bb++){
-              var o=bucket[bb];
-              var ddx=o.x-pt.x, ddy=o.y-pt.y;
-              if(ddx*ddx+ddy*ddy < minDist*minDist){ ok=false; break; }
-            }
-          }
-          if(!ok) break;
+  function erode(mask, w, h, iter){
+    var cur = mask;
+    for(var t=0;t<iter;t++){
+      var nx = new Uint8Array(w*h);
+      for(var y=1;y<h-1;y++){
+        var row=y*w;
+        for(var x=1;x<w-1;x++){
+          var i=row+x;
+          if(cur[i] && cur[i-1] && cur[i+1] && cur[i-w] && cur[i+w]
+             && cur[i-w-1] && cur[i-w+1] && cur[i+w-1] && cur[i+w+1]) nx[i]=1;
         }
-      if(ok){
-        accepted.push({x:pt.x, y:pt.y});
-        var kk = key(gx,gy);
-        (grid[kk] || (grid[kk]=[])).push(pt);
+      }
+      cur = nx;
+    }
+    return cur;
+  }
+
+  function labelCentroids(mask, w, h, minArea){
+    var visited = new Uint8Array(w*h);
+    var stack = new Int32Array(w*h);
+    var centers = [];
+    for(var i=0;i<w*h;i++){
+      if(mask[i] && !visited[i]){
+        var sp=0; stack[sp++]=i; visited[i]=1;
+        var sx=0, sy=0, cnt=0;
+        while(sp>0){
+          var idx=stack[--sp];
+          var x=idx%w, y=(idx/w)|0;
+          sx+=x; sy+=y; cnt++;
+          if(x>0   && mask[idx-1] && !visited[idx-1]){ visited[idx-1]=1; stack[sp++]=idx-1; }
+          if(x<w-1 && mask[idx+1] && !visited[idx+1]){ visited[idx+1]=1; stack[sp++]=idx+1; }
+          if(y>0   && mask[idx-w] && !visited[idx-w]){ visited[idx-w]=1; stack[sp++]=idx-w; }
+          if(y<h-1 && mask[idx+w] && !visited[idx+w]){ visited[idx+w]=1; stack[sp++]=idx+w; }
+        }
+        if(cnt>=minArea) centers.push({ x:sx/cnt, y:sy/cnt });
       }
     }
-    return accepted;
+    return centers;
   }
 
   // ===================================================================
-  //  VẼ CHẤM ĐÁNH DẤU
+  //  VẼ
   // ===================================================================
   function drawOverlay(){
     octx.clearRect(0,0,W,H);
-    var rad = Math.max(5, Math.min(W,H) * 0.012);
+    if(roi){
+      octx.fillStyle='rgba(0,0,0,0.5)';
+      octx.fillRect(0,0,W,roi.y);
+      octx.fillRect(0,roi.y+roi.h,W,H-(roi.y+roi.h));
+      octx.fillRect(0,roi.y,roi.x,roi.h);
+      octx.fillRect(roi.x+roi.w,roi.y,W-(roi.x+roi.w),roi.h);
+      octx.strokeStyle='#fbbf24'; octx.lineWidth=Math.max(2,Math.min(W,H)*0.006);
+      octx.strokeRect(roi.x,roi.y,roi.w,roi.h);
+    }
+    if(cropMode && dragRect){
+      octx.strokeStyle='#fbbf24'; octx.setLineDash([10,7]); octx.lineWidth=Math.max(2,Math.min(W,H)*0.006);
+      octx.strokeRect(dragRect.x,dragRect.y,dragRect.w,dragRect.h); octx.setLineDash([]);
+    }
+    var rad = Math.max(5, Math.min(W,H)*0.011);
     for(var i=0;i<points.length;i++){
-      var p = points[i];
-      octx.beginPath();
-      octx.arc(p.x, p.y, rad, 0, Math.PI*2);
-      octx.fillStyle = 'rgba(52,211,153,0.55)';
-      octx.fill();
-      octx.lineWidth = Math.max(1.5, rad*0.35);
-      octx.strokeStyle = '#065f46';
-      octx.stroke();
-      // số thứ tự
-      octx.fillStyle = '#053826';
-      octx.font = 'bold ' + (rad*1.1).toFixed(0) + 'px sans-serif';
-      octx.textAlign = 'center'; octx.textBaseline = 'middle';
-      octx.fillText(String(i+1), p.x, p.y);
+      var pt=points[i];
+      octx.beginPath(); octx.arc(pt.x,pt.y,rad,0,Math.PI*2);
+      octx.fillStyle='rgba(52,211,153,0.55)'; octx.fill();
+      octx.lineWidth=Math.max(1.5,rad*0.35); octx.strokeStyle='#065f46'; octx.stroke();
+      octx.fillStyle='#053826'; octx.font='bold '+(rad*1.05).toFixed(0)+'px sans-serif';
+      octx.textAlign='center'; octx.textBaseline='middle';
+      octx.fillText(String(i+1), pt.x, pt.y);
     }
   }
 
   // ===================================================================
-  //  CHẠM ĐỂ THÊM / XÓA CHẤM
+  //  TƯƠNG TÁC: khoanh vùng (kéo) / chỉnh chấm (chạm)
   // ===================================================================
   function canvasPos(evt){
     var rect = overlay.getBoundingClientRect();
-    var src = evt;
-    if(evt.touches && evt.touches.length) src = evt.touches[0];
-    else if(evt.changedTouches && evt.changedTouches.length) src = evt.changedTouches[0];
-    var cx = src.clientX - rect.left;
-    var cy = src.clientY - rect.top;
-    return { x: cx * (W/rect.width), y: cy * (H/rect.height) };
+    var s = evt;
+    if(evt.touches && evt.touches.length) s = evt.touches[0];
+    else if(evt.changedTouches && evt.changedTouches.length) s = evt.changedTouches[0];
+    var cx = (s.clientX - rect.left) * (W/rect.width);
+    var cy = (s.clientY - rect.top) * (H/rect.height);
+    return { x: Math.max(0,Math.min(W,cx)), y: Math.max(0,Math.min(H,cy)) };
+  }
+  function normRect(a,b){
+    var x=Math.min(a.x,b.x), y=Math.min(a.y,b.y);
+    return { x:x, y:y, w:Math.abs(a.x-b.x), h:Math.abs(a.y-b.y) };
+  }
+  var moveThresh; // tính theo kích thước ảnh
+
+  function onDown(e){
+    if(!hasImage) return;
+    e.preventDefault();
+    moveThresh = Math.max(8, Math.min(W,H)*0.02);
+    var p = canvasPos(e);
+    moved = false;
+    if(cropMode){ dragStart = p; dragRect = null; }
+    else { downP = p; }
+  }
+  function onMove(e){
+    if(!hasImage) return;
+    var p = canvasPos(e);
+    if(cropMode && dragStart){
+      e.preventDefault();
+      moved = true; dragRect = normRect(dragStart, p); drawOverlay();
+    } else if(downP){
+      if(Math.abs(p.x-downP.x) > moveThresh || Math.abs(p.y-downP.y) > moveThresh) moved = true;
+    }
+  }
+  function onUp(e){
+    if(!hasImage) return;
+    if(cropMode){
+      if(dragStart && moved && dragRect && dragRect.w>12 && dragRect.h>12){
+        roi = dragRect; toast('Đã chọn vùng. Bấm 🤖 Đếm tự động.');
+      } else if(dragStart && !moved){
+        roi = null; toast('Đã bỏ khung — sẽ đếm toàn ảnh.');
+      }
+      dragStart = null; dragRect = null; drawOverlay();
+    } else if(downP){
+      if(!moved) doTapEdit(canvasPos(e));
+      downP = null;
+    }
   }
 
-  function handleTap(evt){
-    if(!hasImage) return;
-    evt.preventDefault();
-    var pos = canvasPos(evt);
-    var hitR = Math.max(12, Math.min(W,H) * 0.025);
-    // tìm chấm gần nhất trong bán kính → xóa; nếu không có → thêm
-    var bestIdx = -1, bestD = hitR*hitR;
+  function doTapEdit(pos){
+    var hitR = Math.max(12, Math.min(W,H)*0.022);
+    var bestIdx=-1, bestD=hitR*hitR;
     for(var i=0;i<points.length;i++){
       var dx=points[i].x-pos.x, dy=points[i].y-pos.y, d=dx*dx+dy*dy;
-      if(d < bestD){ bestD=d; bestIdx=i; }
+      if(d<bestD){ bestD=d; bestIdx=i; }
     }
     pushHistory();
-    if(bestIdx >= 0){ points.splice(bestIdx,1); }
-    else { points.push({x:pos.x, y:pos.y}); }
+    if(bestIdx>=0) points.splice(bestIdx,1);
+    else points.push({ x:pos.x, y:pos.y });
     drawOverlay(); updateCount();
   }
 
-  // iPhone bắn cả touch lẫn click cho một lần chạm → dùng cờ thời gian để chỉ tính 1 lần
-  var lastTouchTime = 0;
-  overlay.addEventListener('touchend', function(e){
-    lastTouchTime = Date.now();
-    handleTap(e);
-  }, { passive:false });
-  overlay.addEventListener('click', function(e){
-    if(Date.now() - lastTouchTime < 700) return; // bỏ click "ảo" sinh ra sau khi chạm
-    handleTap(e);
-  });
+  overlay.addEventListener('touchstart', onDown, { passive:false });
+  overlay.addEventListener('touchmove',  onMove, { passive:false });
+  overlay.addEventListener('touchend',   onUp,   { passive:false });
+  overlay.addEventListener('mousedown',  onDown);
+  overlay.addEventListener('mousemove',  onMove);
+  overlay.addEventListener('mouseup',    onUp);
 
-  // ---- Nút điều khiển ----
+  // ---------- Nút ----------
+  function setCrop(on){
+    cropMode = on;
+    document.getElementById('cropBtn').classList.toggle('on', on);
+    modeTip.classList.toggle('show', on);
+    if(!on){ dragStart=null; dragRect=null; drawOverlay(); }
+  }
+  document.getElementById('cropBtn').addEventListener('click', function(){ setCrop(!cropMode); });
   document.getElementById('autoBtn').addEventListener('click', autoCount);
   document.getElementById('clearBtn').addEventListener('click', function(){
     if(!points.length) return;
-    pushHistory(); points = []; drawOverlay(); updateCount(); toast('Đã xóa hết.');
+    pushHistory(); points=[]; drawOverlay(); updateCount(); toast('Đã xóa hết.');
   });
   document.getElementById('undoBtn').addEventListener('click', function(){
     if(!history.length){ toast('Không còn gì để hoàn tác.'); return; }
     points = JSON.parse(history.pop()); drawOverlay(); updateCount();
   });
 
-  // sliders
-  var sizeR = document.getElementById('sizeRange');
-  sizeR.addEventListener('input', function(){ document.getElementById('sizeVal').textContent = sizeR.value; });
-  var sensR = document.getElementById('sensRange');
-  sensR.addEventListener('input', function(){ document.getElementById('sensVal').textContent = sensR.value; });
-
-  // chọn nền
+  var sizeR=document.getElementById('sizeRange');
+  sizeR.addEventListener('input', function(){ document.getElementById('sizeVal').textContent=sizeR.value; });
+  var sensR=document.getElementById('sensRange');
+  sensR.addEventListener('input', function(){ document.getElementById('sensVal').textContent=sensR.value; });
   document.getElementById('bgSeg').addEventListener('click', function(e){
-    var b = e.target.closest('button'); if(!b) return;
-    bgMode = b.getAttribute('data-bg');
+    var btn=e.target.closest('button'); if(!btn) return;
+    bgMode=btn.getAttribute('data-bg');
     Array.prototype.forEach.call(this.querySelectorAll('button'), function(x){ x.classList.remove('on'); });
-    b.classList.add('on');
-    document.getElementById('bgVal').textContent = b.textContent;
+    btn.classList.add('on');
+    document.getElementById('bgVal').textContent=btn.textContent;
   });
 
 })();
