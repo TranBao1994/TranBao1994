@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#7c3aed" />
+<title>Đếm Thuốc bằng AI (YOLO) 🤖</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0b1220;color:#e6edf3;}
+  header{text-align:center;padding:10px;background:linear-gradient(135deg,#7c3aed,#5b21b6);box-shadow:0 2px 10px rgba(0,0,0,.4);}
+  header h1{margin:0;font-size:19px;} header p{margin:4px 0 0;font-size:12px;opacity:.9;}
+  .count-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;background:#111a2b;border-bottom:1px solid #1f2a3d;}
+  .count-bar .num{font-size:32px;font-weight:800;color:#a78bfa;min-width:64px;text-align:center;}
+  .count-bar .lbl{font-size:12px;opacity:.8;}
+  .stage{position:relative;width:100%;background:#060a13;display:flex;align-items:center;justify-content:center;min-height:220px;overflow:hidden;}
+  #wrap{position:relative;line-height:0;touch-action:none;}
+  #photo,#overlay{display:block;max-width:100%;height:auto;} #overlay{position:absolute;left:0;top:0;}
+  .empty{color:#5b6b82;font-size:14px;padding:36px 20px;text-align:center;}
+  .controls{padding:12px 14px 90px;}
+  .row{display:flex;gap:10px;margin-bottom:10px;}
+  button,label.btn{flex:1;border:0;border-radius:12px;padding:14px 8px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+  .btn-model{background:#7c3aed;} .btn-cam{background:#0e7490;} .btn-gal{background:#4338ca;}
+  .btn-auto{background:#15803d;} .btn-clear{background:#b91c1c;} .btn-ghost{background:#1f2a3d;}
+  button:active,label.btn:active{filter:brightness(1.2);transform:scale(.98);} button:disabled{opacity:.4;}
+  input[type=file]{display:none;}
+  .panel{background:#111a2b;border:1px solid #1f2a3d;border-radius:12px;padding:12px;margin-bottom:12px;}
+  .panel h3{margin:0 0 10px;font-size:13px;opacity:.85;font-weight:600;}
+  .slider .top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;} .slider .top b{color:#a78bfa;}
+  input[type=range]{width:100%;accent-color:#7c3aed;}
+  .status{font-size:12.5px;padding:8px 12px;border-radius:8px;margin-bottom:10px;line-height:1.5;}
+  .status.warn{background:#78350f;color:#fde68a;} .status.ok{background:#064e3b;color:#a7f3d0;} .status.info{background:#1e293b;color:#cbd5e1;}
+  .hint{font-size:12px;color:#8aa0bd;line-height:1.55;} .hint b{color:#cde;}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1f2a3d;color:#fff;padding:10px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.5);max-width:90%;text-align:center;}
+  .toast.show{opacity:1;}
+  .spin{display:none;} .spin.show{display:inline-block;animation:r 1s linear infinite;} @keyframes r{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🤖 Đếm Thuốc bằng AI (YOLO)</h1>
+  <p>Dùng model YOLO em đã train — chạy ngay trong điện thoại</p>
+</header>
+
+<div class="count-bar">
+  <div><span class="lbl">Tổng số viên</span></div>
+  <div class="num" id="count">0</div>
+  <button class="btn-ghost" id="undoBtn" style="flex:0 0 auto;padding:10px 14px;font-size:13px;">↩︎ Hoàn tác</button>
+</div>
+
+<div class="stage">
+  <div id="emptyMsg" class="empty">Bước 1: bấm <b>📦 Nạp model</b> (file .onnx).<br>Bước 2: <b>Chụp / Chọn ảnh</b>.<br>Bước 3: <b>🤖 AI đếm</b>.</div>
+  <div id="wrap" style="display:none;"><canvas id="photo"></canvas><canvas id="overlay"></canvas></div>
+</div>
+
+<div class="controls">
+  <div id="status" class="status warn">⚠️ Chưa nạp model. Hãy bấm “📦 Nạp model” và chọn file <b>pill.onnx</b> em đã train.</div>
+
+  <div class="row">
+    <label class="btn btn-model">📦 Nạp model<input type="file" id="modelInput" accept=".onnx" /></label>
+  </div>
+  <div class="row">
+    <label class="btn btn-cam">📷 Chụp ảnh<input type="file" id="camInput" accept="image/*" capture="environment" /></label>
+    <label class="btn btn-gal">🖼️ Chọn ảnh<input type="file" id="galInput" accept="image/*" /></label>
+  </div>
+  <div class="row">
+    <button class="btn-auto" id="autoBtn" disabled><span class="spin" id="spin">⏳</span> 🤖 AI đếm</button>
+    <button class="btn-clear" id="clearBtn" disabled>🗑️ Xóa hết</button>
+  </div>
+
+  <div class="panel">
+    <h3>⚙️ Tinh chỉnh</h3>
+    <div class="slider">
+      <div class="top"><span>Ngưỡng tin cậy (cao = chắc chắn hơn, ít hơn)</span><b id="confVal">0.25</b></div>
+      <input type="range" id="confRange" min="5" max="90" value="25" />
+    </div>
+    <div class="slider">
+      <div class="top"><span>Gộp khung trùng (IoU)</span><b id="iouVal">0.45</b></div>
+      <input type="range" id="iouRange" min="20" max="80" value="45" />
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="hint">
+      💡 <b>Cách dùng:</b> Nạp model 1 lần → Chụp/Chọn ảnh → AI đếm. Nếu đếm dư hãy tăng <b>Ngưỡng tin cậy</b>, đếm thiếu thì giảm xuống.<br>
+      Vẫn <b>chạm</b> để thêm/bớt chấm cho đúng 100%.<br>
+      Chưa có model? Xem file <b>HUONG-DAN-AI-YOLO.md</b> để train (miễn phí, trên điện thoại).
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ONNX Runtime Web (chạy YOLO trong trình duyệt) -->
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var photo=document.getElementById('photo'), overlay=document.getElementById('overlay');
+  var pctx=photo.getContext('2d',{willReadFrequently:true}), octx=overlay.getContext('2d');
+  var wrap=document.getElementById('wrap'), emptyMsg=document.getElementById('emptyMsg');
+  var countEl=document.getElementById('count'), statusEl=document.getElementById('status');
+  var W=0,H=0, points=[], history=[], hasImage=false, session=null;
+  var IMGSZ=640;
+
+  function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},1900);}
+  function setStatus(cls,html){statusEl.className='status '+cls;statusEl.innerHTML=html;}
+  function pushHistory(){history.push(JSON.stringify(points));if(history.length>40)history.shift();}
+  function updateCount(){countEl.textContent=points.length;}
+  function setRunBtns(){var on=hasImage&&session;document.getElementById('autoBtn').disabled=!on;document.getElementById('clearBtn').disabled=!hasImage;}
+
+  // ---------- Nạp model ONNX ----------
+  document.getElementById('modelInput').addEventListener('change', function(e){
+    var f=e.target.files[0]; e.target.value=''; if(!f) return;
+    setStatus('info','⏳ Đang nạp model… (lần đầu hơi lâu)');
+    var rd=new FileReader();
+    rd.onload=function(){
+      ort.InferenceSession.create(new Uint8Array(rd.result), {executionProviders:['wasm']})
+        .then(function(s){ session=s; setStatus('ok','✅ Đã nạp model: <b>'+f.name+'</b>. Giờ chụp/chọn ảnh rồi bấm “AI đếm”.'); setRunBtns(); toast('Model sẵn sàng!'); })
+        .catch(function(err){ console.error(err); setStatus('warn','❌ Không nạp được model: '+err.message); });
+    };
+    rd.onerror=function(){ setStatus('warn','❌ Không đọc được file model.'); };
+    rd.readAsArrayBuffer(f);
+  });
+
+  // ---------- Tải ảnh ----------
+  function loadFile(file){
+    if(!file) return;
+    var img=new Image();
+    img.onload=function(){
+      var maxDim=1200, sc=Math.min(1,maxDim/Math.max(img.width,img.height));
+      W=Math.round(img.width*sc); H=Math.round(img.height*sc);
+      photo.width=W;photo.height=H;overlay.width=W;overlay.height=H;
+      pctx.drawImage(img,0,0,W,H);
+      points=[];history=[];hasImage=true;
+      emptyMsg.style.display='none';wrap.style.display='block';
+      setRunBtns();drawOverlay();updateCount();URL.revokeObjectURL(img.src);
+      toast(session?'Đã tải ảnh. Bấm 🤖 AI đếm.':'Đã tải ảnh. Hãy nạp model trước.');
+    };
+    img.onerror=function(){toast('Không đọc được ảnh.');};
+    img.src=URL.createObjectURL(file);
+  }
+  document.getElementById('camInput').addEventListener('change',function(e){loadFile(e.target.files[0]);e.target.value='';});
+  document.getElementById('galInput').addEventListener('change',function(e){loadFile(e.target.files[0]);e.target.value='';});
+
+  // ---------- Tiền xử lý: letterbox về 640x640 ----------
+  function preprocess(){
+    var scale=Math.min(IMGSZ/W, IMGSZ/H);
+    var nw=Math.round(W*scale), nh=Math.round(H*scale);
+    var padX=Math.floor((IMGSZ-nw)/2), padY=Math.floor((IMGSZ-nh)/2);
+    var tmp=document.createElement('canvas'); tmp.width=IMGSZ; tmp.height=IMGSZ;
+    var tctx=tmp.getContext('2d');
+    tctx.fillStyle='#727272'; tctx.fillRect(0,0,IMGSZ,IMGSZ);
+    tctx.drawImage(photo,0,0,W,H,padX,padY,nw,nh);
+    var d=tctx.getImageData(0,0,IMGSZ,IMGSZ).data;
+    var arr=new Float32Array(3*IMGSZ*IMGSZ);
+    var area=IMGSZ*IMGSZ;
+    for(var i=0,p=0;i<area;i++,p+=4){
+      arr[i]=d[p]/255;             // R
+      arr[i+area]=d[p+1]/255;      // G
+      arr[i+2*area]=d[p+2]/255;    // B
+    }
+    return {tensor:new ort.Tensor('float32',arr,[1,3,IMGSZ,IMGSZ]), scale:scale, padX:padX, padY:padY};
+  }
+
+  // ---------- Giải mã đầu ra YOLOv8: [1, 4+nc, N] ----------
+  function decode(out, conf, pre){
+    var dims=out.dims, data=out.data;
+    var ch=dims[1], num=dims[2];        // ch = 4 + số lớp ; num = số anchor (8400)
+    var nc=ch-4;
+    var boxes=[];
+    for(var i=0;i<num;i++){
+      var best=0;
+      for(var c=0;c<nc;c++){ var s=data[(4+c)*num+i]; if(s>best) best=s; }
+      if(best<conf) continue;
+      var cx=data[i], cy=data[num+i], w=data[2*num+i], h=data[3*num+i];
+      var x1=(cx-w/2-pre.padX)/pre.scale, y1=(cy-h/2-pre.padY)/pre.scale;
+      var x2=(cx+w/2-pre.padX)/pre.scale, y2=(cy+h/2-pre.padY)/pre.scale;
+      boxes.push({x1:x1,y1:y1,x2:x2,y2:y2,score:best});
+    }
+    return boxes;
+  }
+
+  function nms(boxes, iouTh){
+    boxes.sort(function(a,b){return b.score-a.score;});
+    var keep=[];
+    for(var i=0;i<boxes.length;i++){
+      var b=boxes[i], ok=true;
+      for(var j=0;j<keep.length;j++){ if(iou(b,keep[j])>iouTh){ ok=false; break; } }
+      if(ok) keep.push(b);
+    }
+    return keep;
+  }
+  function iou(a,b){
+    var x1=Math.max(a.x1,b.x1), y1=Math.max(a.y1,b.y1);
+    var x2=Math.min(a.x2,b.x2), y2=Math.min(a.y2,b.y2);
+    var w=Math.max(0,x2-x1), h=Math.max(0,y2-y1), inter=w*h;
+    var ar=(a.x2-a.x1)*(a.y2-a.y1), br=(b.x2-b.x1)*(b.y2-b.y1);
+    return inter/(ar+br-inter+1e-6);
+  }
+
+  // ---------- Chạy AI ----------
+  function runAI(){
+    if(!hasImage||!session) return;
+    var spin=document.getElementById('spin'); spin.classList.add('show');
+    document.getElementById('autoBtn').disabled=true;
+    setTimeout(function(){
+      var pre=preprocess();
+      var feeds={}; feeds[session.inputNames[0]]=pre.tensor;
+      session.run(feeds).then(function(res){
+        var out=res[session.outputNames[0]];
+        var conf=parseInt(document.getElementById('confRange').value,10)/100;
+        var iouTh=parseInt(document.getElementById('iouRange').value,10)/100;
+        var boxes=nms(decode(out,conf,pre), iouTh);
+        points=[];
+        for(var i=0;i<boxes.length;i++){
+          var b=boxes[i];
+          points.push({x:(b.x1+b.x2)/2, y:(b.y1+b.y2)/2, w:b.x2-b.x1, h:b.y2-b.y1});
+        }
+        pushHistory(); drawOverlay(); updateCount();
+        toast(points.length?('AI đếm được '+points.length+' viên.'):'Không thấy viên nào — thử giảm Ngưỡng tin cậy.');
+      }).catch(function(err){ console.error(err); toast('Lỗi chạy AI: '+err.message); })
+      .then(function(){ spin.classList.remove('show'); document.getElementById('autoBtn').disabled=false; });
+    },30);
+  }
+
+  // ---------- Vẽ ----------
+  function drawOverlay(){
+    octx.clearRect(0,0,W,H);
+    var rad=Math.max(5,Math.min(W,H)*0.011);
+    for(var i=0;i<points.length;i++){
+      var p=points[i];
+      if(p.w&&p.h){ octx.strokeStyle='rgba(167,139,250,0.9)'; octx.lineWidth=Math.max(1.5,rad*0.4);
+        octx.strokeRect(p.x-p.w/2,p.y-p.h/2,p.w,p.h); }
+      octx.beginPath();octx.arc(p.x,p.y,rad,0,Math.PI*2);
+      octx.fillStyle='rgba(167,139,250,0.55)';octx.fill();
+      octx.lineWidth=Math.max(1.5,rad*0.35);octx.strokeStyle='#4c1d95';octx.stroke();
+      octx.fillStyle='#1e1b4b';octx.font='bold '+(rad*1.05).toFixed(0)+'px sans-serif';
+      octx.textAlign='center';octx.textBaseline='middle';octx.fillText(String(i+1),p.x,p.y);
+    }
+  }
+
+  // ---------- Chạm thêm/bớt ----------
+  function canvasPos(evt){
+    var rect=overlay.getBoundingClientRect(), s=evt;
+    if(evt.changedTouches&&evt.changedTouches.length) s=evt.changedTouches[0];
+    var cx=(s.clientX-rect.left)*(W/rect.width), cy=(s.clientY-rect.top)*(H/rect.height);
+    return {x:cx,y:cy};
+  }
+  var downP=null,moved=false,moveTh;
+  overlay.addEventListener('touchstart',function(e){if(!hasImage)return;e.preventDefault();moveTh=Math.max(8,Math.min(W,H)*0.02);downP=canvasPos(e);moved=false;},{passive:false});
+  overlay.addEventListener('touchmove',function(e){if(!downP)return;var p=canvasPos({changedTouches:e.touches});if(Math.abs(p.x-downP.x)>moveTh||Math.abs(p.y-downP.y)>moveTh)moved=true;},{passive:false});
+  overlay.addEventListener('touchend',function(e){if(!hasImage||!downP)return;if(!moved)tapEdit(canvasPos(e));downP=null;},{passive:false});
+  overlay.addEventListener('click',function(e){if(!hasImage)return;if('ontouchstart'in window)return;tapEdit(canvasPos(e));});
+  function tapEdit(pos){
+    var hitR=Math.max(12,Math.min(W,H)*0.022),bi=-1,bd=hitR*hitR;
+    for(var i=0;i<points.length;i++){var dx=points[i].x-pos.x,dy=points[i].y-pos.y,d=dx*dx+dy*dy;if(d<bd){bd=d;bi=i;}}
+    pushHistory();
+    if(bi>=0)points.splice(bi,1); else points.push({x:pos.x,y:pos.y});
+    drawOverlay();updateCount();
+  }
+
+  document.getElementById('autoBtn').addEventListener('click',runAI);
+  document.getElementById('clearBtn').addEventListener('click',function(){if(!points.length)return;pushHistory();points=[];drawOverlay();updateCount();toast('Đã xóa hết.');});
+  document.getElementById('undoBtn').addEventListener('click',function(){if(!history.length){toast('Không còn gì để hoàn tác.');return;}points=JSON.parse(history.pop());drawOverlay();updateCount();});
+  var cr=document.getElementById('confRange');cr.addEventListener('input',function(){document.getElementById('confVal').textContent=(cr.value/100).toFixed(2);});
+  var ir=document.getElementById('iouRange');ir.addEventListener('input',function(){document.getElementById('iouVal').textContent=(ir.value/100).toFixed(2);});
+})();
+</script>
+</body>
+</html>

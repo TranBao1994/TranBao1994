@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0e7490" />
+<title>Đếm Viên Thuốc 💊</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0b1220; color: #e6edf3; overscroll-behavior: none;
+  }
+  header {
+    text-align: center; padding: 10px 10px 8px;
+    background: linear-gradient(135deg, #0e7490, #155e75);
+    box-shadow: 0 2px 10px rgba(0,0,0,.4);
+  }
+  header h1 { margin: 0; font-size: 19px; }
+  header p { margin: 4px 0 0; font-size: 12px; opacity: .9; }
+
+  .count-bar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 8px 14px;
+    background: #111a2b; border-bottom: 1px solid #1f2a3d;
+  }
+  .count-bar .num {
+    font-size: 32px; font-weight: 800; color: #34d399; line-height: 1;
+    min-width: 64px; text-align: center;
+  }
+  .count-bar .lbl { font-size: 12px; opacity: .8; }
+
+  .stage {
+    position: relative; width: 100%;
+    background: #060a13;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 220px; overflow: hidden;
+  }
+  #wrap { position: relative; line-height: 0; touch-action: none; }
+  #photo, #overlay { display: block; max-width: 100%; height: auto; }
+  #overlay { position: absolute; left: 0; top: 0; }
+  .empty { color: #5b6b82; font-size: 14px; padding: 36px 20px; text-align: center; }
+
+  .mode-tip {
+    background: #78350f; color: #fde68a; font-size: 12.5px; text-align: center;
+    padding: 8px 12px; display: none; line-height: 1.4;
+  }
+  .mode-tip.show { display: block; }
+
+  .controls { padding: 12px 14px 90px; }
+  .row { display: flex; gap: 10px; margin-bottom: 10px; }
+  button, label.btn {
+    flex: 1; border: 0; border-radius: 12px; padding: 14px 8px;
+    font-size: 15px; font-weight: 700; color: #fff; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-cam { background: #0e7490; }
+  .btn-gal { background: #4338ca; }
+  .btn-auto { background: #15803d; }
+  .btn-clear { background: #b91c1c; }
+  .btn-crop { background: #1f2a3d; border: 2px solid #475569; }
+  .btn-crop.on { background: #b45309; border-color: #fbbf24; }
+  .btn-ghost { background: #1f2a3d; }
+  button:active, label.btn:active { filter: brightness(1.2); transform: scale(.98); }
+  button:disabled { opacity: .4; }
+  input[type=file] { display: none; }
+
+  .panel { background: #111a2b; border: 1px solid #1f2a3d; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .panel h3 { margin: 0 0 10px; font-size: 13px; opacity: .85; font-weight: 600; }
+  .slider { margin-bottom: 12px; }
+  .slider:last-child { margin-bottom: 0; }
+  .slider .top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+  .slider .top b { color: #34d399; }
+  input[type=range] { width: 100%; accent-color: #0e7490; }
+
+  .seg { display: flex; border: 1px solid #1f2a3d; border-radius: 10px; overflow: hidden; }
+  .seg button { border-radius: 0; background: #0b1220; font-size: 13px; padding: 10px; font-weight: 600; }
+  .seg button.on { background: #0e7490; }
+
+  .hint { font-size: 12px; color: #8aa0bd; line-height: 1.55; }
+  .hint b { color: #cde; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    background: #1f2a3d; color: #fff; padding: 10px 16px; border-radius: 20px;
+    font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 50;
+    box-shadow: 0 4px 14px rgba(0,0,0,.5); max-width: 90%; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+  .spin { display:none; }
+  .spin.show { display:inline-block; animation: r 1s linear infinite; }
+  @keyframes r { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>💊 Đếm Viên Thuốc</h1>
+  <p>Khoanh vùng → AI đếm → chạm để chỉnh cho đúng</p>
+</header>
+
+<div class="count-bar">
+  <div><span class="lbl">Tổng số viên</span></div>
+  <div class="num" id="count">0</div>
+  <button class="btn-ghost" id="undoBtn" style="flex:0 0 auto;padding:10px 14px;font-size:13px;">↩︎ Hoàn tác</button>
+</div>
+
+<div class="mode-tip" id="modeTip">✂️ Đang khoanh vùng — <b>kéo ngón tay</b> bao quanh chỗ thuốc. Chạm 1 cái (không kéo) để bỏ khung. Bấm “Khoanh vùng” lần nữa để xong.</div>
+
+<div class="stage">
+  <div id="emptyMsg" class="empty">Chưa có ảnh.<br>Bấm <b>Chụp ảnh</b> hoặc <b>Chọn ảnh</b> để bắt đầu.</div>
+  <div id="wrap" style="display:none;">
+    <canvas id="photo"></canvas>
+    <canvas id="overlay"></canvas>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="row">
+    <label class="btn btn-cam">📷 Chụp ảnh<input type="file" id="camInput" accept="image/*" capture="environment" /></label>
+    <label class="btn btn-gal">🖼️ Chọn ảnh<input type="file" id="galInput" accept="image/*" /></label>
+  </div>
+  <div class="row">
+    <button class="btn-crop" id="cropBtn" disabled>✂️ Khoanh vùng</button>
+    <button class="btn-auto" id="autoBtn" disabled><span class="spin" id="spin">⏳</span> 🤖 Đếm tự động</button>
+  </div>
+  <div class="row">
+    <button class="btn-clear" id="clearBtn" disabled>🗑️ Xóa hết điểm</button>
+  </div>
+
+  <div class="panel">
+    <h3>⚙️ Tinh chỉnh (kéo rồi bấm “Đếm tự động” lại)</h3>
+    <div class="slider">
+      <div class="top"><span>Kích thước viên (lớn = đếm thưa hơn)</span><b id="sizeVal">22</b></div>
+      <input type="range" id="sizeRange" min="8" max="70" value="22" />
+    </div>
+    <div class="slider">
+      <div class="top"><span>Mức lọc nền (thấp = nhạy hơn, cao = loại nhiễu)</span><b id="sensVal">5</b></div>
+      <input type="range" id="sensRange" min="-25" max="45" value="5" />
+    </div>
+    <div class="slider">
+      <div class="top"><span>Nền của ảnh</span><b id="bgVal">Tự động</b></div>
+      <div class="seg" id="bgSeg">
+        <button data-bg="auto" class="on">Tự động</button>
+        <button data-bg="dark">Nền tối</button>
+        <button data-bg="light">Nền sáng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="hint">
+      <b>Để đếm chính xác:</b><br>
+      1️⃣ Bấm <b>✂️ Khoanh vùng</b> rồi kéo 1 khung <b>chỉ bao quanh chỗ thuốc</b> (bỏ nền, đồ xung quanh).<br>
+      2️⃣ Bấm <b>🤖 Đếm tự động</b>.<br>
+      3️⃣ Nếu dư/thiếu: chỉnh <b>Kích thước viên</b> cho khớp rồi đếm lại.<br>
+      4️⃣ <b>Chạm</b> vào chỗ sót để thêm chấm, chạm chấm thừa để xóa → ra số đúng 100%.<br>
+      💡 Chụp <b>từ trên xuống</b>, đủ sáng, trải đều, ít chồng lên nhau.
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var photo = document.getElementById('photo');
+  var overlay = document.getElementById('overlay');
+  var pctx = photo.getContext('2d', { willReadFrequently: true });
+  var octx = overlay.getContext('2d');
+  var wrap = document.getElementById('wrap');
+  var emptyMsg = document.getElementById('emptyMsg');
+  var countEl = document.getElementById('count');
+  var modeTip = document.getElementById('modeTip');
+
+  var W = 0, H = 0;
+  var points = [];          // {x,y} toạ độ canvas
+  var history = [];
+  var hasImage = false;
+  var bgMode = 'auto';
+  var roi = null;           // {x,y,w,h} vùng đếm; null = toàn ảnh
+  var cropMode = false;
+  var dragStart = null, dragRect = null, downP = null, moved = false;
+
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._t); t._t = setTimeout(function(){ t.classList.remove('show'); }, 1900);
+  }
+  function pushHistory(){ history.push(JSON.stringify(points)); if(history.length>40) history.shift(); }
+  function updateCount(){ countEl.textContent = points.length; }
+  function setBtns(on){
+    document.getElementById('autoBtn').disabled = !on;
+    document.getElementById('clearBtn').disabled = !on;
+    document.getElementById('cropBtn').disabled = !on;
+  }
+
+  // ---------- Tải ảnh ----------
+  function loadFile(file){
+    if(!file) return;
+    var img = new Image();
+    img.onload = function(){
+      var maxDim = 1200;
+      var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      W = Math.round(img.width * scale);
+      H = Math.round(img.height * scale);
+      photo.width = W; photo.height = H;
+      overlay.width = W; overlay.height = H;
+      pctx.drawImage(img, 0, 0, W, H);
+      points = []; history = []; roi = null; setCrop(false);
+      hasImage = true;
+      emptyMsg.style.display = 'none';
+      wrap.style.display = 'block';
+      setBtns(true);
+      drawOverlay(); updateCount();
+      URL.revokeObjectURL(img.src);
+      toast('Đã tải ảnh. Hãy ✂️ Khoanh vùng quanh thuốc rồi bấm Đếm.');
+    };
+    img.onerror = function(){ toast('Không đọc được ảnh.'); };
+    img.src = URL.createObjectURL(file);
+  }
+  document.getElementById('camInput').addEventListener('change', function(e){ loadFile(e.target.files[0]); e.target.value=''; });
+  document.getElementById('galInput').addEventListener('change', function(e){ loadFile(e.target.files[0]); e.target.value=''; });
+
+  // ===================================================================
+  //  ĐẾM TỰ ĐỘNG (mới):
+  //  ROI → xám → ngưỡng thích nghi (local adaptive) → co (erode) tách
+  //  viên dính nhau → gắn nhãn liên thông → tâm mỗi cụm = 1 viên
+  // ===================================================================
+  function autoCount(){
+    if(!hasImage) return;
+    if(cropMode) setCrop(false);
+    var spin = document.getElementById('spin');
+    spin.classList.add('show');
+    document.getElementById('autoBtn').disabled = true;
+    setTimeout(function(){
+      try { runDetection(); }
+      catch(err){ console.error(err); toast('Lỗi: ' + err.message); }
+      spin.classList.remove('show');
+      document.getElementById('autoBtn').disabled = false;
+    }, 30);
+  }
+
+  function runDetection(){
+    var rx = roi ? Math.round(roi.x) : 0;
+    var ry = roi ? Math.round(roi.y) : 0;
+    var rw = roi ? Math.round(roi.w) : W;
+    var rh = roi ? Math.round(roi.h) : H;
+    rw = Math.min(rw, W - rx); rh = Math.min(rh, H - ry);
+    if(rw < 5 || rh < 5){ toast('Vùng quá nhỏ.'); return; }
+
+    var data = pctx.getImageData(rx, ry, rw, rh).data;
+    var n = rw * rh;
+    var gray = new Float32Array(n);
+    var hist = new Int32Array(256);
+    for(var i=0, p=0; i<n; i++, p+=4){
+      var g = (data[p]*0.299 + data[p+1]*0.587 + data[p+2]*0.114) | 0;
+      gray[i] = g; hist[g]++;
+    }
+
+    // --- Otsu chỉ để quyết định viên sáng hay tối ---
+    var total=n, sum=0;
+    for(var t=0;t<256;t++) sum += t*hist[t];
+    var sumB=0, wB=0, varMax=0, oth=127;
+    for(var t2=0;t2<256;t2++){
+      wB+=hist[t2]; if(!wB) continue;
+      var wF=total-wB; if(!wF) break;
+      sumB += t2*hist[t2];
+      var mB=sumB/wB, mF=(sum-sumB)/wF;
+      var bt=wB*wF*(mB-mF)*(mB-mF);
+      if(bt>varMax){ varMax=bt; oth=t2; }
+    }
+    var bright=0; for(var b=0;b<n;b++) if(gray[b]>oth) bright++;
+    var pillsAreBright;
+    if(bgMode==='dark') pillsAreBright=true;
+    else if(bgMode==='light') pillsAreBright=false;
+    else pillsAreBright = bright < n*0.5;
+
+    var pillSize = parseInt(document.getElementById('sizeRange').value,10);
+    var C = parseInt(document.getElementById('sensRange').value,10);
+
+    // --- Ngưỡng thích nghi bằng ảnh tích phân (integral image) ---
+    var iw = rw+1;
+    var integ = new Float64Array(iw*(rh+1));
+    for(var y=0;y<rh;y++){
+      var rs=0;
+      for(var x=0;x<rw;x++){ rs += gray[y*rw+x]; integ[(y+1)*iw+(x+1)] = integ[y*iw+(x+1)] + rs; }
+    }
+    var half = Math.max(8, Math.min(140, Math.round(pillSize*2.5)));
+    var mask = new Uint8Array(n);
+    for(var y2=0;y2<rh;y2++){
+      var x0,y0,x1,y1;
+      y0 = Math.max(0, y2-half); y1 = Math.min(rh-1, y2+half);
+      for(var x2=0;x2<rw;x2++){
+        x0 = Math.max(0, x2-half); x1 = Math.min(rw-1, x2+half);
+        var A=integ[y0*iw+x0], Bv=integ[y0*iw+(x1+1)], Cc=integ[(y1+1)*iw+x0], D=integ[(y1+1)*iw+(x1+1)];
+        var area=(x1-x0+1)*(y1-y0+1);
+        var lm=(D-Bv-Cc+A)/area;
+        var gv=gray[y2*rw+x2];
+        var fg = pillsAreBright ? (gv > lm + C) : (gv < lm - C);
+        mask[y2*rw+x2] = fg ? 1 : 0;
+      }
+    }
+
+    // --- Khử nhiễu nhỏ: mở ảnh nhẹ (1 lần erode→dilate) ---
+    mask = openOnce(mask, rw, rh);
+
+    // --- Distance transform → tìm đỉnh = tâm mỗi viên (không làm mất viên) ---
+    var dist = distanceTransform(mask, rw, rh);
+    var minDist = Math.max(4, Math.round(pillSize));
+    var minPeak = Math.max(2, pillSize*0.32);
+    var peaks = findPeaks(dist, rw, rh, minDist, minPeak);
+
+    points = [];
+    for(var c=0;c<peaks.length;c++) points.push({ x: peaks[c].x + rx, y: peaks[c].y + ry });
+    pushHistory();
+    drawOverlay(); updateCount();
+    if(points.length === 0){
+      toast('Chưa thấy viên nào. Hãy giảm "Mức lọc nền" hoặc đổi "Nền của ảnh".');
+    } else {
+      toast('AI đếm được ' + points.length + ' viên. Chạm để chỉnh lại.');
+    }
+  }
+
+  // Mở ảnh nhẹ: erode 1 lần rồi dilate 1 lần (khử chấm nhiễu lẻ, giữ nguyên viên)
+  function openOnce(mask, w, h){
+    var er = new Uint8Array(w*h);
+    for(var y=1;y<h-1;y++){ var r=y*w;
+      for(var x=1;x<w-1;x++){ var i=r+x;
+        if(mask[i] && mask[i-1] && mask[i+1] && mask[i-w] && mask[i+w]) er[i]=1;
+      }
+    }
+    var di = new Uint8Array(w*h);
+    for(var y2=1;y2<h-1;y2++){ var r2=y2*w;
+      for(var x2=1;x2<w-1;x2++){ var j=r2+x2;
+        if(er[j] || er[j-1] || er[j+1] || er[j-w] || er[j+w]) di[j]=1;
+      }
+    }
+    return di;
+  }
+
+  // Distance transform (chamfer 3-4): khoảng cách tới pixel nền gần nhất
+  function distanceTransform(mask, w, h){
+    var INF = 1e9, d = new Float32Array(w*h);
+    for(var i=0;i<d.length;i++) d[i] = mask[i] ? INF : 0;
+    var a=3, b=4;
+    for(var y=0;y<h;y++) for(var x=0;x<w;x++){
+      var idx=y*w+x; if(d[idx]===0) continue; var v=d[idx];
+      if(x>0) v=Math.min(v, d[idx-1]+a);
+      if(y>0) v=Math.min(v, d[idx-w]+a);
+      if(x>0&&y>0) v=Math.min(v, d[idx-w-1]+b);
+      if(x<w-1&&y>0) v=Math.min(v, d[idx-w+1]+b);
+      d[idx]=v;
+    }
+    for(var y2=h-1;y2>=0;y2--) for(var x2=w-1;x2>=0;x2--){
+      var idx2=y2*w+x2; if(d[idx2]===0) continue; var v2=d[idx2];
+      if(x2<w-1) v2=Math.min(v2, d[idx2+1]+a);
+      if(y2<h-1) v2=Math.min(v2, d[idx2+w]+a);
+      if(x2<w-1&&y2<h-1) v2=Math.min(v2, d[idx2+w+1]+b);
+      if(x2>0&&y2<h-1) v2=Math.min(v2, d[idx2+w-1]+b);
+      d[idx2]=v2;
+    }
+    for(var k=0;k<d.length;k++) d[k] /= 3;
+    return d;
+  }
+
+  // Tìm cực đại cục bộ rồi lọc theo khoảng cách (NMS) → mỗi đỉnh = 1 viên
+  function findPeaks(dist, w, h, minDist, minPeak){
+    var cands = [];
+    for(var y=1;y<h-1;y++) for(var x=1;x<w-1;x++){
+      var i=y*w+x, v=dist[i];
+      if(v < minPeak) continue;
+      var isMax = true;
+      for(var dy=-1;dy<=1&&isMax;dy++) for(var dx=-1;dx<=1;dx++){
+        if(dx===0&&dy===0) continue;
+        if(dist[(y+dy)*w+(x+dx)] > v){ isMax=false; break; }
+      }
+      if(isMax) cands.push({x:x,y:y,v:v});
+    }
+    cands.sort(function(p,q){ return q.v - p.v; });
+    var cell = Math.max(1, minDist), grid = {}, accepted = [];
+    function key(a,b){ return a+'_'+b; }
+    for(var c=0;c<cands.length;c++){
+      var pt=cands[c], gx=Math.floor(pt.x/cell), gy=Math.floor(pt.y/cell), ok=true;
+      for(var ax=-1;ax<=1&&ok;ax++) for(var ay=-1;ay<=1;ay++){
+        var bk=grid[key(gx+ax,gy+ay)];
+        if(bk){ for(var bb=0;bb<bk.length;bb++){
+          var o=bk[bb], ddx=o.x-pt.x, ddy=o.y-pt.y;
+          if(ddx*ddx+ddy*ddy < minDist*minDist){ ok=false; break; }
+        } }
+        if(!ok) break;
+      }
+      if(ok){ accepted.push({x:pt.x,y:pt.y}); var kk=key(gx,gy); (grid[kk]||(grid[kk]=[])).push(pt); }
+    }
+    return accepted;
+  }
+
+  // ===================================================================
+  //  VẼ
+  // ===================================================================
+  function drawOverlay(){
+    octx.clearRect(0,0,W,H);
+    if(roi){
+      octx.fillStyle='rgba(0,0,0,0.5)';
+      octx.fillRect(0,0,W,roi.y);
+      octx.fillRect(0,roi.y+roi.h,W,H-(roi.y+roi.h));
+      octx.fillRect(0,roi.y,roi.x,roi.h);
+      octx.fillRect(roi.x+roi.w,roi.y,W-(roi.x+roi.w),roi.h);
+      octx.strokeStyle='#fbbf24'; octx.lineWidth=Math.max(2,Math.min(W,H)*0.006);
+      octx.strokeRect(roi.x,roi.y,roi.w,roi.h);
+    }
+    if(cropMode && dragRect){
+      octx.strokeStyle='#fbbf24'; octx.setLineDash([10,7]); octx.lineWidth=Math.max(2,Math.min(W,H)*0.006);
+      octx.strokeRect(dragRect.x,dragRect.y,dragRect.w,dragRect.h); octx.setLineDash([]);
+    }
+    var rad = Math.max(5, Math.min(W,H)*0.011);
+    for(var i=0;i<points.length;i++){
+      var pt=points[i];
+      octx.beginPath(); octx.arc(pt.x,pt.y,rad,0,Math.PI*2);
+      octx.fillStyle='rgba(52,211,153,0.55)'; octx.fill();
+      octx.lineWidth=Math.max(1.5,rad*0.35); octx.strokeStyle='#065f46'; octx.stroke();
+      octx.fillStyle='#053826'; octx.font='bold '+(rad*1.05).toFixed(0)+'px sans-serif';
+      octx.textAlign='center'; octx.textBaseline='middle';
+      octx.fillText(String(i+1), pt.x, pt.y);
+    }
+  }
+
+  // ===================================================================
+  //  TƯƠNG TÁC: khoanh vùng (kéo) / chỉnh chấm (chạm)
+  // ===================================================================
+  function canvasPos(evt){
+    var rect = overlay.getBoundingClientRect();
+    var s = evt;
+    if(evt.touches && evt.touches.length) s = evt.touches[0];
+    else if(evt.changedTouches && evt.changedTouches.length) s = evt.changedTouches[0];
+    var cx = (s.clientX - rect.left) * (W/rect.width);
+    var cy = (s.clientY - rect.top) * (H/rect.height);
+    return { x: Math.max(0,Math.min(W,cx)), y: Math.max(0,Math.min(H,cy)) };
+  }
+  function normRect(a,b){
+    var x=Math.min(a.x,b.x), y=Math.min(a.y,b.y);
+    return { x:x, y:y, w:Math.abs(a.x-b.x), h:Math.abs(a.y-b.y) };
+  }
+  var moveThresh; // tính theo kích thước ảnh
+
+  function onDown(e){
+    if(!hasImage) return;
+    e.preventDefault();
+    moveThresh = Math.max(8, Math.min(W,H)*0.02);
+    var p = canvasPos(e);
+    moved = false;
+    if(cropMode){ dragStart = p; dragRect = null; }
+    else { downP = p; }
+  }
+  function onMove(e){
+    if(!hasImage) return;
+    var p = canvasPos(e);
+    if(cropMode && dragStart){
+      e.preventDefault();
+      moved = true; dragRect = normRect(dragStart, p); drawOverlay();
+    } else if(downP){
+      if(Math.abs(p.x-downP.x) > moveThresh || Math.abs(p.y-downP.y) > moveThresh) moved = true;
+    }
+  }
+  function onUp(e){
+    if(!hasImage) return;
+    if(cropMode){
+      if(dragStart && moved && dragRect && dragRect.w>12 && dragRect.h>12){
+        roi = dragRect; toast('Đã chọn vùng. Bấm 🤖 Đếm tự động.');
+      } else if(dragStart && !moved){
+        roi = null; toast('Đã bỏ khung — sẽ đếm toàn ảnh.');
+      }
+      dragStart = null; dragRect = null; drawOverlay();
+    } else if(downP){
+      if(!moved) doTapEdit(canvasPos(e));
+      downP = null;
+    }
+  }
+
+  function doTapEdit(pos){
+    var hitR = Math.max(12, Math.min(W,H)*0.022);
+    var bestIdx=-1, bestD=hitR*hitR;
+    for(var i=0;i<points.length;i++){
+      var dx=points[i].x-pos.x, dy=points[i].y-pos.y, d=dx*dx+dy*dy;
+      if(d<bestD){ bestD=d; bestIdx=i; }
+    }
+    pushHistory();
+    if(bestIdx>=0) points.splice(bestIdx,1);
+    else points.push({ x:pos.x, y:pos.y });
+    drawOverlay(); updateCount();
+  }
+
+  overlay.addEventListener('touchstart', onDown, { passive:false });
+  overlay.addEventListener('touchmove',  onMove, { passive:false });
+  overlay.addEventListener('touchend',   onUp,   { passive:false });
+  overlay.addEventListener('mousedown',  onDown);
+  overlay.addEventListener('mousemove',  onMove);
+  overlay.addEventListener('mouseup',    onUp);
+
+  // ---------- Nút ----------
+  function setCrop(on){
+    cropMode = on;
+    document.getElementById('cropBtn').classList.toggle('on', on);
+    modeTip.classList.toggle('show', on);
+    if(!on){ dragStart=null; dragRect=null; drawOverlay(); }
+  }
+  document.getElementById('cropBtn').addEventListener('click', function(){ setCrop(!cropMode); });
+  document.getElementById('autoBtn').addEventListener('click', autoCount);
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    if(!points.length) return;
+    pushHistory(); points=[]; drawOverlay(); updateCount(); toast('Đã xóa hết.');
+  });
+  document.getElementById('undoBtn').addEventListener('click', function(){
+    if(!history.length){ toast('Không còn gì để hoàn tác.'); return; }
+    points = JSON.parse(history.pop()); drawOverlay(); updateCount();
+  });
+
+  var sizeR=document.getElementById('sizeRange');
+  sizeR.addEventListener('input', function(){ document.getElementById('sizeVal').textContent=sizeR.value; });
+  var sensR=document.getElementById('sensRange');
+  sensR.addEventListener('input', function(){ document.getElementById('sensVal').textContent=sensR.value; });
+  document.getElementById('bgSeg').addEventListener('click', function(e){
+    var btn=e.target.closest('button'); if(!btn) return;
+    bgMode=btn.getAttribute('data-bg');
+    Array.prototype.forEach.call(this.querySelectorAll('button'), function(x){ x.classList.remove('on'); });
+    btn.classList.add('on');
+    document.getElementById('bgVal').textContent=btn.textContent;
+  });
+
+})();
+</script>
+</body>
+</html>
